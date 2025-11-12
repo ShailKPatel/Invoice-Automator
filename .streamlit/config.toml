@@ -1,0 +1,8 @@
+# .streamlit/config.toml
+[theme]
+base = "light"
+primaryColor = "#2b2b2b"          # dark neutral for highlights
+backgroundColor = "#ffffff"       # main page background (white)
+secondaryBackgroundColor = "#7a7a7aff"  # sidebar background (light gray)
+textColor = "#000000"             # black text
+font = "sans serif"
