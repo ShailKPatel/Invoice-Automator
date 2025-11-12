@@ -215,7 +215,9 @@ def compute_metrics(tp, fp, fn):
     prec = tp / (tp + fp) if (tp + fp) > 0 else 0.0
     rec = tp / (tp + fn) if (tp + fn) > 0 else 0.0
     f1 = 2 * prec * rec / (prec + rec) if (prec + rec) > 0 else 0.0
-    acc = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+    # Accuracy defined here as tp / (tp + fp + fn) since true negatives are not tracked.
+    denom = tp + fp + fn
+    acc = tp / denom if denom > 0 else 0.0
     return {"precision": prec, "recall": rec, "f1": f1, "accuracy": acc}
 
 
@@ -319,7 +321,8 @@ if st.button("Run full evaluation"):
     avg_prec = sum(m['precision'] for m in inv_metrics.values()) / len(inv_metrics)
     avg_rec = sum(m['recall'] for m in inv_metrics.values()) / len(inv_metrics)
     avg_f1 = sum(m['f1'] for m in inv_metrics.values()) / len(inv_metrics)
-    st.write(f"Invoice-level average Precision: {avg_prec:.3f}, Recall: {avg_rec:.3f}, F1: {avg_f1:.3f}")
+    avg_acc = sum(m['accuracy'] for m in inv_metrics.values()) / len(inv_metrics)
+    st.write(f"Invoice-level average Precision: {avg_prec:.3f}, Recall: {avg_rec:.3f}, F1: {avg_f1:.3f}, Accuracy: {avg_acc:.3f}")
 
     # === Line items evaluation ===
     st.subheader("Line-item level evaluation (description-based matching)")
@@ -421,6 +424,7 @@ if st.button("Run full evaluation"):
     avg_prec_li = sum(m['precision'] for m in li_metrics.values()) / len(li_metrics)
     avg_rec_li = sum(m['recall'] for m in li_metrics.values()) / len(li_metrics)
     avg_f1_li = sum(m['f1'] for m in li_metrics.values()) / len(li_metrics)
-    st.write(f"Line-item average Precision: {avg_prec_li:.3f}, Recall: {avg_rec_li:.3f}, F1: {avg_f1_li:.3f}")
+    avg_acc_li = sum(m['accuracy'] for m in li_metrics.values()) / len(li_metrics)
+    st.write(f"Line-item average Precision: {avg_prec_li:.3f}, Recall: {avg_rec_li:.3f}, F1: {avg_f1_li:.3f}, Accuracy: {avg_acc_li:.3f}")
 
     st.success("Evaluation complete.")

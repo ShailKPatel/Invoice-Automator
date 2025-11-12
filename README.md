@@ -174,11 +174,8 @@ All these limitations are practical rather than structural. The pipeline is desi
 Evaluation is performed on a small subset of 15 labeled invoice files.  
 Performance is measured by runtime per document and extraction completeness.  
 
-The overall Beto evaluation scores on this subset are as follows:
-- **Accuracy:** 0.80  
-- **Precision:** 0.90  
-- **Recall:** 0.90  
-- **F1-score:** 0.70  
+Invoice-level average:  Precision: 0.896, Recall: 0.883, F1: 0.890, Accuracy: 0.813
+Line-item average: 0.897, Recall: 0.867, F1: 0.881, Accuracy: 0.791
 
 ---
 n

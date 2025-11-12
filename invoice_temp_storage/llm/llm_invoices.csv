@@ -1,1 +1,16 @@
-﻿file_path,invoice_id,vendor,date,total,invoice_number,visual_used
+file_path,invoice_id,vendor,date,total,invoice_number,visual_used
+C:\Stealth AI\Clean Reader\invoice_temp_storage\processed\Copy of ARPFIINVOEBTCHLASER _10_-page1.jpg,inv_00001,Pacific Food Importers,03-06-2025,491.83,375991,False
+C:\Stealth AI\Clean Reader\invoice_temp_storage\processed\Copy of ARPFIINVOEBTCHLASER _10_-page1.pdf,inv_00002,Pacific Food Importers,03-06-2025,488.97,375991,False
+C:\Stealth AI\Clean Reader\invoice_temp_storage\processed\Copy of ARPFIINVOEBTCHLASER _11_-page1.pdf,inv_00003,Pacific Food Importers,03-06-2025,488.97,375991,False
+C:\Stealth AI\Clean Reader\invoice_temp_storage\processed\Copy of ARPFIINVOEBTCHLASER _11_-page2.pdf,inv_00004,Pacific Food Importers,04-06-2025,,376063,True
+C:\Stealth AI\Clean Reader\invoice_temp_storage\processed\Copy of ARPFIINVOEBTCHLASER _11_-page3.jpg,inv_00005,Pacific Food Importers,05-06-2025,100.35,376173,False
+C:\Stealth AI\Clean Reader\invoice_temp_storage\processed\Copy of ARPFIINVOEBTCHLASER _11_-page3.pdf,inv_00006,Pacific Food Importers,05-06-2025,100.35,376173,False
+C:\Stealth AI\Clean Reader\invoice_temp_storage\processed\Copy of ARPFIINVOEBTCHLASER _11_-page4.pdf,inv_00007,Pacific Food Importers,05-06-2025,133.42,376172,False
+C:\Stealth AI\Clean Reader\invoice_temp_storage\processed\Copy of ARPFIINVOEBTCHLASER _4_-page1.jpg,inv_00008,Pacific Food Importers,15-07-2025,522.75,378093,False
+C:\Stealth AI\Clean Reader\invoice_temp_storage\processed\Copy of ARPFIINVOEBTCHLASER _4_-page1.pdf,inv_00009,Pacific Food Importers,15-07-2025,519.89,378093,False
+C:\Stealth AI\Clean Reader\invoice_temp_storage\processed\Copy of ARPFIINVOEBTCHLASER _4_-page2.jpg,inv_00010,Pacific Food Importers,15-07-2025,75.08,378094,False
+C:\Stealth AI\Clean Reader\invoice_temp_storage\processed\Copy of ARPFIINVOEBTCHLASER _4_-page2.pdf,inv_00011,Pacific Food Importers,15-07-2025,75.08,378094,False
+C:\Stealth AI\Clean Reader\invoice_temp_storage\processed\Copy of ARPFIINVOEBTCHLASER _4_-page4.pdf,inv_00012,Pacific Food Importers,17-07-2025,95.23,378262,False
+C:\Stealth AI\Clean Reader\invoice_temp_storage\processed\Copy of Inv_20068978_from_Franks_Quality_Produce_18559799_11828.jpg,inv_00013,Franks Quality Produce,05-06-2025,90.12,20068978,True
+C:\Stealth AI\Clean Reader\invoice_temp_storage\processed\Copy of Inv_20068978_from_Franks_Quality_Produce_18559799_11828.pdf,inv_00014,Franks Produce,12-06-2025,90.12,20068978,False
+C:\Stealth AI\Clean Reader\invoice_temp_storage\processed\Copy of Inv_20075310_from_Franks_Quality_Produce_18842235_13952 _1_.pdf,inv_00015,Franks Quality Produce,28-07-2025,74.26,20075310,False
