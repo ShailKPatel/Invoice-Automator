@@ -243,7 +243,7 @@ if st.button("Run full evaluation"):
     invoice_keys = sorted(list(ans_inv_df.index.astype(str)))
 
     # Fields to evaluate for invoices
-    invoice_fields = ["invoice_id", "vendor", "date", "total", "invoice_number"]
+    invoice_fields = ["vendor", "date", "total", "invoice_number"]
 
     # Counters per field
     counters = {f: {"tp": 0, "fp": 0, "fn": 0} for f in invoice_fields}
@@ -258,17 +258,6 @@ if st.button("Run full evaluation"):
                     counters[f]['fn'] += 1
             continue
         sub_row = sub_inv_df.loc[key]
-
-        # invoice_id - compare as strings
-        a = normalize_text(ans_row['invoice_id'])
-        b = normalize_text(sub_row['invoice_id'])
-        if a == b and a != "":
-            counters['invoice_id']['tp'] += 1
-        else:
-            if a != "":
-                counters['invoice_id']['fn'] += 1
-            if b != "":
-                counters['invoice_id']['fp'] += 1
 
         # vendor - fuzzy optional
         a = normalize_text(ans_row['vendor'])

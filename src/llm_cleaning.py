@@ -103,7 +103,8 @@ Rules:
 6. If a field is missing, use null.
 7. Ensure totals match quantity * unit_price if possible, otherwise keep the total from the invoice text.
 8. Do not include fuel surcharges or taxes as regular line items.
-9. Use the following schema strictly:
+9. The date in source is in format MM-DD-YYYY you have to convert it to DD-MM-YYYY.
+10. Use the following schema strictly:
 
 {{
   "llm_invoices": {{
@@ -286,7 +287,8 @@ Your task:
      (size and brand need not appear unless your schema includes them explicitly.)
 6. Ensure totals = quantity × unit_price wherever possible.
 7. Recalculate confidence between 0 and 1 based on correction reliability.
-8. Output **only valid JSON** (no markdown or commentary).
+8. The date in source is in format MM-DD-YYYY you have to convert it to DD-MM-YYYY.
+9. Output **only valid JSON** (no markdown or commentary).
 
 Here is the current JSON to correct:
 {json.dumps(existing_json, indent=2)}

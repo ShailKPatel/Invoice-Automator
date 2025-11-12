@@ -28,102 +28,144 @@ from src.llm_cleaning import llm_cleaner
 # Global runtime memory for vendors
 known_vendors = set()
 
-def normalize_vendor_name(vendor: str, known_vendors_list=None):
+# put near top of module
+import os
+import re
+import shutil
+import unicodedata
+from pathlib import Path
+from datetime import datetime
+import pandas as pd
+import wordninja
+from typing import Iterable, Optional
+
+# ensure this exists somewhere in module scope if you rely on it
+# known_vendors = set()  # uncomment and populate if needed
+
+# ---------- normalization helpers ----------
+def _strip_accents(s: str) -> str:
+    nfkd = unicodedata.normalize("NFKD", s)
+    return "".join(ch for ch in nfkd if not unicodedata.combining(ch))
+
+def _safe_filename(name: str) -> str:
+    # remove path components and dangerous characters, keep extension if present
+    base = os.path.basename(name)
+    # replace path-separators and control characters
+    base = base.replace(os.sep, "_").replace("/", "_")
+    # allow letters, digits, dot, dash, underscore, space
+    base = re.sub(r"[^0-9A-Za-z\.\-\_\s]", "_", base)
+    return base
+
+# ---------- vendor normalization ----------
+def normalize_vendor_name(vendor: str, known_vendors_list: Optional[Iterable[str]] = None):
     """
-    Normalize and learn vendor names automatically.
+    Normalize and learn vendor names across OSes. Returns a cleaned title-cased vendor string.
+    known_vendors_list can be a set/list to match against and to add new learned names.
     """
     if not vendor:
         return ""
+
     if known_vendors_list is None:
-        known_vendors_list = known_vendors
+        try:
+            known_vendors_list = known_vendors  # fallback to module-level variable
+        except NameError:
+            known_vendors_list = set()
 
-    # Step 1 – clean string
-    vendor_clean = vendor.strip()
-    vendor_clean = re.sub(r"[^A-Za-z0-9]", "", vendor_clean)
-    vendor_lower = vendor_clean.lower()
+    # unicode normalize and strip surrounding whitespace
+    vendor_clean = _strip_accents(str(vendor)).strip()
 
-    # Step 2 – remove suffixes
-    suffixes = ["inc", "incorporated", "ltd", "llc", "company", "corp", "co"]
-    for s in suffixes:
-        if vendor_lower.endswith(s):
-            vendor_lower = vendor_lower[: -len(s)]
-    vendor_lower = vendor_lower.strip()
+    # keep spaces and word characters so wordninja has something sensible to split
+    vendor_alnum_space = re.sub(r"[^\w\s]", "", vendor_clean, flags=re.UNICODE)
+    vendor_lower = vendor_alnum_space.lower().strip()
 
-    # Step 3 – match known vendors
-    for known in known_vendors_list:
-        if known.lower().replace(" ", "") in vendor_lower:
-            return known
+    # remove common suffixes as whole words (not by raw endswith only)
+    suffixes = {"inc", "incorporated", "ltd", "llc", "company", "corp", "co"}
+    parts = [p for p in vendor_lower.split() if p and p not in suffixes]
+    vendor_lower = " ".join(parts).strip()
 
-    # Step 4 – use wordninja to split concatenated words
-    words = wordninja.split(vendor_lower)
-    cleaned = " ".join(words).title()
+    # Step 3 – match known vendors (normalize comparison)
+    for known in list(known_vendors_list):
+        norm_known = re.sub(r"\s+", "", _strip_accents(str(known)).lower())
+        norm_candidate = re.sub(r"\s+", "", vendor_lower)
+        if norm_known and norm_known in norm_candidate:
+            return str(known)
 
-    # Step 5 – store learned vendor name
-    known_vendors_list.add(cleaned)
+    # Step 4 – split concatenated words with wordninja and title case
+    words = wordninja.split(vendor_lower.replace("_", ""))
+    cleaned = " ".join(words).strip().title()
+
+    # Step 5 – store learned vendor name if set-like
+    if isinstance(known_vendors_list, set):
+        known_vendors_list.add(cleaned)
+    elif hasattr(known_vendors_list, "append"):
+        known_vendors_list.append(cleaned)
+
     return cleaned
 
-
+# ---------- date conversion ----------
 def convert_date_format(date_str):
-    """Convert date to DD-MM-YYYY format if possible."""
+    """Convert date to DD-MM-YYYY format if possible, robust across locales."""
     if pd.isna(date_str) or not str(date_str).strip():
         return ""
-    date_str = str(date_str).strip()
+    s = str(date_str).strip()
     known_formats = ("%d-%m-%Y", "%Y-%m-%d", "%m-%d-%Y", "%d/%m/%Y", "%Y/%m/%d", "%m/%d/%Y")
     for fmt in known_formats:
         try:
-            dt = datetime.strptime(date_str, fmt)
+            dt = datetime.strptime(s, fmt)
             return dt.strftime("%d-%m-%Y")
         except ValueError:
             continue
+    # fallback: let pandas try, prefer dayfirst to handle DD/MM/YYYY like inputs
     try:
-        dt = pd.to_datetime(date_str, errors="coerce")
+        dt = pd.to_datetime(s, dayfirst=True, errors="coerce")
         if pd.notna(dt):
             return dt.strftime("%d-%m-%Y")
     except Exception:
         pass
-    return date_str
+    return s
 
-# -------------------------------
-# Helper Functions
-# -------------------------------
-
-def get_root_temp_folder():
+# ---------- temp folder helpers (Path-based) ----------
+def get_root_temp_folder() -> Path:
+    """
+    Returns Path to repo-root/invoice_temp_storage.
+    Uses Path(__file__).resolve().parents[1] which is reliable for typical package layout.
+    """
     root_dir = Path(__file__).resolve().parents[1]
     temp_folder = root_dir / "invoice_temp_storage"
-    os.makedirs(temp_folder, exist_ok=True)
-    return str(temp_folder)
+    temp_folder.mkdir(parents=True, exist_ok=True)
+    return temp_folder
 
+def clean_temp_storage(temp_folder: (str | Path)):
+    temp_folder = Path(temp_folder)
+    processed_folder = temp_folder / "processed"
+    regex_folder = temp_folder / "regex"
+    llm_folder = temp_folder / "llm"
 
-def clean_temp_storage(temp_folder):
-    processed_folder = os.path.join(temp_folder, "processed")
-    regex_folder = os.path.join(temp_folder, "regex")
-    llm_folder = os.path.join(temp_folder, "llm")
-
-    for folder in [processed_folder, regex_folder, llm_folder]:
-        Path(folder).mkdir(parents=True, exist_ok=True)
-        for item in os.listdir(folder):
-            item_path = os.path.join(folder, item)
+    for folder in (processed_folder, regex_folder, llm_folder):
+        folder.mkdir(parents=True, exist_ok=True)
+        for item in folder.iterdir():
             try:
-                if os.path.isfile(item_path):
-                    os.unlink(item_path)
-                elif os.path.isdir(item_path):
-                    shutil.rmtree(item_path)
+                if item.is_file() or item.is_symlink():
+                    item.unlink()
+                elif item.is_dir():
+                    shutil.rmtree(item)
             except Exception:
+                # keep going, do not crash cleanup
                 pass
 
     # Create blank LLM CSV templates
-    llm_invoices_path = os.path.join(llm_folder, "llm_invoices.csv")
-    llm_lineitems_path = os.path.join(llm_folder, "llm_lineitems.csv")
+    llm_invoices_path = llm_folder / "llm_invoices.csv"
+    llm_lineitems_path = llm_folder / "llm_lineitems.csv"
 
-    invoices_cols = ["file_path", "invoice_id", "vendor", "date", "total", "invoice_number","visual_used"]
+    invoices_cols = ["file_path", "invoice_id", "vendor", "date", "total", "invoice_number", "visual_used"]
     lineitems_cols = ["file_path", "invoice_id", "description", "quantity", "unit_price", "total"]
 
     pd.DataFrame(columns=invoices_cols).to_csv(llm_invoices_path, index=False, encoding="utf-8-sig")
     pd.DataFrame(columns=lineitems_cols).to_csv(llm_lineitems_path, index=False, encoding="utf-8-sig")
-    
+
     # Create blank REGEX CSV template
-    regex_invoices_path = os.path.join(regex_folder, "regex_invoices.csv")
-    regex_lineitems_path = os.path.join(regex_folder, "regex_lineitems.csv")
+    regex_invoices_path = regex_folder / "regex_invoices.csv"
+    regex_lineitems_path = regex_folder / "regex_lineitems.csv"
 
     regex_invoices_cols = ["file_path", "vendor", "date", "total", "invoice_number", "cleaned_text"]
     regex_lineitems_cols = ["file_path", "invoice_number", "description", "quantity", "unit_price", "total"]
@@ -133,39 +175,61 @@ def clean_temp_storage(temp_folder):
 
     return processed_folder, regex_folder, llm_folder
 
-
 def save_uploaded_files(uploaded_files, folder_path):
+    """
+    Save uploaded files (Streamlit UploadedFile or similar) safely and return list of Path objects.
+    """
+    folder = Path(folder_path)
+    folder.mkdir(parents=True, exist_ok=True)
     saved_files = []
     for uploaded_file in uploaded_files:
-        file_path = os.path.join(folder_path, uploaded_file.name)
-        with open(file_path, "wb") as f:
-            f.write(uploaded_file.read())
-        saved_files.append(file_path)
+        safe_name = _safe_filename(getattr(uploaded_file, "name", str(uploaded_file)))
+        dest = folder / safe_name
+        # Streamlit uploaded file may be BytesIO-like with .read(); support both
+        content = None
+        try:
+            content = uploaded_file.read()
+        except Exception:
+            try:
+                content = uploaded_file.getbuffer()
+            except Exception:
+                pass
+        if content is None:
+            # fallback: try to convert to bytes
+            content = bytes(uploaded_file)
+        with open(dest, "wb") as f:
+            f.write(content)
+        saved_files.append(dest)
     return saved_files
 
-
 def process_files_to_processed_folder(temp_folder, processed_folder):
-    for filename in os.listdir(temp_folder):
-        file_path = os.path.join(temp_folder, filename)
-        if os.path.isdir(file_path):
+    temp_folder = Path(temp_folder)
+    processed_folder = Path(processed_folder)
+    processed_folder.mkdir(parents=True, exist_ok=True)
+
+    for p in temp_folder.iterdir():
+        if p.is_dir():
             continue
-        if filename.lower().endswith((".png", ".jpg", ".jpeg")):
-            shutil.move(file_path, os.path.join(processed_folder, filename))
-        elif filename.lower().endswith(".pdf"):
-            reader = PdfReader(file_path)
+        suffix = p.suffix.lower()
+        if suffix in {".png", ".jpg", ".jpeg"}:
+            shutil.move(str(p), str(processed_folder / p.name))
+        elif suffix == ".pdf":
+            reader = PdfReader(str(p))
             num_pages = len(reader.pages)
-            if num_pages == 1:
-                shutil.move(file_path, os.path.join(processed_folder, filename))
+            if num_pages <= 1:
+                shutil.move(str(p), str(processed_folder / p.name))
             else:
-                base_name = os.path.splitext(filename)[0]
-                for i, page in enumerate(reader.pages):
+                base_name = p.stem
+                for i, page in enumerate(reader.pages, start=1):
                     writer = PdfWriter()
                     writer.add_page(page)
-                    new_filename = f"{base_name}-page{i+1}.pdf"
-                    new_path = os.path.join(processed_folder, new_filename)
+                    new_filename = f"{base_name}-page{i}.pdf"
+                    new_path = processed_folder / new_filename
                     with open(new_path, "wb") as output_file:
                         writer.write(output_file)
-                os.remove(file_path)
+                p.unlink()  # remove original multi-page file
+
+    return processed_folder
 
 def run_regex_extraction(processed_folder: str) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """
@@ -493,23 +557,6 @@ if uploaded_files:
                     plt.tight_layout()
                     st.pyplot(plt)
 
-                if "date" in llm_invoices_df.columns:
-                    st.markdown("### Monthly Spend Trend")
-                    monthly_spend = (
-                        llm_invoices_df.dropna(subset=["date"])
-                        .assign(month=lambda x: x["date"].dt.to_period("M"))
-                        .groupby("month", as_index=False)["total"]
-                        .sum()
-                    )
-
-                    if not monthly_spend.empty:
-                        plt.figure(figsize=(8, 4))
-                        plt.plot(monthly_spend["month"].astype(str), monthly_spend["total"], marker="o")
-                        plt.xticks(rotation=45, ha="right")
-                        plt.xlabel("Month")
-                        plt.ylabel("Total Spend")
-                        plt.tight_layout()
-                        st.pyplot(plt)
 
                 st.markdown("### Average Invoice Value by Vendor")
                 avg_invoice_df = (
@@ -551,7 +598,7 @@ if uploaded_files:
             if "visual_use" in llm_lineitems_df.columns:
                 st.markdown("### Visual Use Distribution")
 
-                visual_counts = llm_lineitems_df["visual_use"].value_counts(dropna=False)
+                visual_counts = llm_lineitems_df["visual_used"].value_counts(dropna=False)
 
                 if not visual_counts.empty:
                     plt.figure(figsize=(4, 4))
